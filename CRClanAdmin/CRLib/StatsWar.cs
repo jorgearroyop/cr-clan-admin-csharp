@@ -10,14 +10,14 @@ namespace CRLib
 {
     public abstract class StatsWar
     {
-        public abstract void LoadKeyValue();
+        public abstract string LoadKeyValue(string path);
 
-        public abstract Task<bool> RequestDataFromServer();
+        public abstract Task<string> RequestDataFromServer();
 
         public abstract DataTable CreateTable();
 
         public abstract string ConvertTableToHtml(DataTable dt);
 
-        public abstract void OutputInHtmlFile();
+        //public abstract void OutputInHtmlFile();
     }
 }

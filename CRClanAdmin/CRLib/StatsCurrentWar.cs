@@ -13,42 +13,33 @@ namespace CRLib
     public class StatsCurrentWar : StatsWar
     {
         private CurrentWar cw;
-        private string keyVal = null;
+        private string keyVal = null;        
 
-        public override async void OutputInHtmlFile()
+
+
+        public override string LoadKeyValue(string path)
         {
-            LoadKeyValue();
-            if (keyVal != null)
-            {
-                bool flagResp = await RequestDataFromServer();
-                if (flagResp)
-                {
-                    DataTable tableCurrentWar = CreateTable();
-                    string HtmlBody = ConvertTableToHtml(tableCurrentWar);
-                    System.IO.File.WriteAllText(@"currentWarDataTable.html", HtmlBody);
-                }                
-            }            
-        }
+            string error = null;
 
-
-
-        public override void LoadKeyValue()
-        {
             try
-            {
-                string path = @"key.txt";
+            {                
                 keyVal = File.ReadAllText(path); ;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                error = e.Message;
+                Console.WriteLine(error);
             }
+
+            return error;
         }
 
 
 
-        public override async Task<bool> RequestDataFromServer()
+        public override async Task<string> RequestDataFromServer()
         {
+            string error = null;
+
             string uri = "https://api.clashroyale.com/v1/clans/%232Y0L8VJ2/currentwar";
             HttpClient httpClient = new HttpClient();            
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", keyVal);
@@ -66,7 +57,9 @@ namespace CRLib
             //XNode node = JsonConvert.DeserializeXNode(responseBody, "Root");
             //Console.WriteLine(node.ToString());
             //System.IO.File.WriteAllText(@"currentWar.xml", node.ToString());
-            return true;
+
+            //return true;
+            return error;
         }
 
 
@@ -150,6 +143,12 @@ namespace CRLib
 
             string Htmltext = strHTMLBuilder.ToString();
             return Htmltext;
+        }
+
+
+        public string GetKeyVal()
+        {
+            return keyVal;
         }
     }
 }

@@ -17,46 +17,35 @@ namespace CRLib
 {
     public class StatsWarLog : StatsWar
     {
-
         private WarLog wl;
         private int numWars = 5;
         private string keyVal = null;
+        private string clanId = null;       
 
-        public override async void OutputInHtmlFile()
+
+
+        public override string LoadKeyValue(string path)
         {
-            LoadKeyValue();
-            if (keyVal != null)
-            {
-                bool flagResp = await RequestDataFromServer();
-                if (flagResp)
-                {
-                    DataTable tableWarLog = CreateTable();
-                    string HtmlBody = ConvertTableToHtml(tableWarLog);
-                    System.IO.File.WriteAllText(@"WarLogTable.html", HtmlBody);
-                }
-            }                        
-        }
+            string error = null;
 
-
-
-        public override void LoadKeyValue()
-        {            
             try
-            {
-                string path = @"key.txt";                
+            {                                
                 keyVal = File.ReadAllText(path); ;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
-            }            
+                error = e.Message;
+                Console.WriteLine(error);
+            }
+
+            return error;
         }
         
 
 
-        public override async Task<bool> RequestDataFromServer()
-        {
-            bool flag = false;
+        public override async Task<string> RequestDataFromServer()
+        {            
+            string error = null;
             string uri = GetWarLogUri();
             HttpClient httpClient = new HttpClient();
 
@@ -65,22 +54,14 @@ namespace CRLib
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", keyVal);
                 string responseBody = await httpClient.GetStringAsync(uri);
 
-                wl = JsonConvert.DeserializeObject<WarLog>(responseBody);
-
-                // Output an XML file
-                //XNode node = JsonConvert.DeserializeXNode(responseBody, "Root");
-                //System.IO.File.WriteAllText(@"warLog.xml", node.ToString());
-
-                // Output XML to Console
-                //Console.WriteLine(node.ToString());
-                flag = true;
+                wl = JsonConvert.DeserializeObject<WarLog>(responseBody);                
             }
             catch(Exception e)
             {
-                Console.WriteLine(e.Message);
-            }
-
-            return flag;
+                error = e.Message + "\nMake sure your clan id is correct and that you ip has been added to the key created on CR Web API: https://developer.clashroyale.com";
+                Console.WriteLine(e.Message);                
+            }            
+            return error;
         }
 
 
@@ -138,15 +119,8 @@ namespace CRLib
                 }
             }
 
-            // Print table in console
-            //foreach (DataRow dataRow in table.Rows)
-            //{
-            //    foreach (var item in dataRow.ItemArray)
-            //    {
-            //        Console.Write(item + "  |  ");
-            //    }
-            //    Console.WriteLine();
-            //}
+            CalculateTotals(table);
+
             return table;
         }
 
@@ -277,6 +251,26 @@ namespace CRLib
         }
 
 
+        public string GetKeyVal()
+        {
+            return keyVal;
+        }
+        
+
+        public void SetNumWars(int num)
+        {
+            numWars = num;
+        }
+        
+
+        public void SetClanId(string cId)
+        {
+            if (cId.Contains("#"))
+                clanId = cId.Substring(1);
+            else
+                clanId = cId;
+        }
+        
 
         private DateTime FormatDateCR(string strDate)
         {
@@ -300,15 +294,47 @@ namespace CRLib
 
         private string GetWarLogUri()
         {
-            string uri = "https://api.clashroyale.com/v1/clans/%232Y0L8VJ2/warlog";
-
+            string uri = "https://api.clashroyale.com/v1/clans/%23" + clanId + "/warlog";
+            
             if (numWars > 0)
-            {
-                //string uri = "https://api.clashroyale.com/v1/clans/%232Y0L8VJ2/warlog?limit=5";
+            {                
                 uri = uri + "?limit=" + numWars;
             }           
 
             return uri;
+        }
+
+
+        private void CalculateTotals(DataTable dt)
+        {
+            List<int> TotWins = new List<int>();
+            int sum;
+
+            foreach (DataRow myRow in dt.Rows)
+            {
+                sum = 0;
+                foreach (DataColumn myColumn in dt.Columns)
+                {
+                    string typeCol = myColumn.ColumnName.Substring(0, 2);                    
+
+                    if (typeCol == "wi")
+                    {
+                        string cellVal = myRow[myColumn.ColumnName].ToString();
+                        int val;
+                        if (Int32.TryParse(cellVal, out val))
+                        {
+                            sum += val;
+                        }
+                    }
+                }
+                TotWins.Add(sum);
+            }            
+
+            dt.Columns.Add("SumWins", typeof(int));
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                dt.Rows[i][dt.Columns.Count - 1] = TotWins[i];
+            }
         }
     }
 }
